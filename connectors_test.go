@@ -560,4 +560,88 @@ var _ = Describe("Connector Lifecycle", func() {
 			})
 		})
 	})
+
+	Describe("RestartTask", func() {
+		var statusCode int
+		taskID := 0
+
+		BeforeEach(func() {
+			server.AppendHandlers(
+				ghttp.CombineHandlers(
+					ghttp.VerifyHeader(jsonAcceptHeader),
+					ghttp.RespondWithPtr(&statusCode, nil),
+				),
+			)
+		})
+
+		Context("when existing connector name is given", func() {
+			BeforeEach(func() {
+				statusCode = http.StatusOK
+				server.AppendHandlers(
+					ghttp.CombineHandlers(
+						ghttp.VerifyRequest("POST", "/connectors/local-file-source/tasks/0/restart"),
+					),
+				)
+			})
+
+			It("restarts connector", func() {
+				resp, err := client.RestartTask("local-file-source", taskID)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			})
+
+			Context("when rebalance is in process", func() {
+				BeforeEach(func() {
+					statusCode = http.StatusConflict
+					server.AppendHandlers(
+						ghttp.CombineHandlers(
+							ghttp.VerifyRequest("POST", "/connectors/local-file-source/tasks/0/restart"),
+						),
+					)
+				})
+
+				It("returns error with a conflict response", func() {
+					resp, err := client.RestartTask("local-file-source", taskID)
+					Expect(err).To(HaveOccurred())
+					Expect(resp.StatusCode).To(Equal(http.StatusConflict))
+				})
+			})
+		})
+
+		Context("when nonexisting connector name is given", func() {
+			BeforeEach(func() {
+				// The API actually throws a 500 on POST to nonexistent
+				statusCode = http.StatusInternalServerError
+				server.AppendHandlers(
+					ghttp.CombineHandlers(
+						ghttp.VerifyRequest("POST", "/connectors/local-file-source/tasks/0/restart"),
+					),
+				)
+			})
+
+			It("returns error with a server error response", func() {
+				resp, err := client.RestartTask("local-file-source", taskID)
+				Expect(err).To(HaveOccurred())
+				Expect(resp.StatusCode).To(Equal(http.StatusInternalServerError))
+			})
+		})
+
+		Context("when nonexisting task id is given", func() {
+			BeforeEach(func() {
+				// The API actually throws a 500 on POST to nonexistent
+				statusCode = http.StatusInternalServerError
+				server.AppendHandlers(
+					ghttp.CombineHandlers(
+						ghttp.VerifyRequest("POST", "/connectors/local-file-source/tasks/5/restart"),
+					),
+				)
+			})
+
+			It("returns error with a server error response", func() {
+				resp, err := client.RestartTask("local-file-source", 5)
+				Expect(err).Should(HaveOccurred())
+				Expect(resp.StatusCode).To(Equal(http.StatusInternalServerError))
+			})
+		})
+	})
 })

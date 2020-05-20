@@ -175,10 +175,18 @@ func (c *Client) ResumeConnector(name string) (*http.Response, error) {
 	return c.doRequest("PUT", path, nil, nil)
 }
 
-// RestartConnector restarts a connector and its tasks.
+// RestartConnector restarts a connector
 //
 // See http://docs.confluent.io/current/connect/userguide.html#post--connectors-(string-name)-restart
 func (c *Client) RestartConnector(name string) (*http.Response, error) {
 	path := fmt.Sprintf("connectors/%v/restart", name)
+	return c.doRequest("POST", path, nil, nil)
+}
+
+// RestartTask restarts a connector's task by task id
+//
+// See https://docs.confluent.io/current/connect/references/restapi.html#post--connectors-(string-name)-tasks-(int-taskid)-restart
+func (c *Client) RestartTask(name string, id int) (*http.Response, error) {
+	path := fmt.Sprintf("connectors/%v/tasks/%v/restart", name, id)
 	return c.doRequest("POST", path, nil, nil)
 }
